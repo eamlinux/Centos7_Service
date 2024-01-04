@@ -28,10 +28,13 @@ wget https://download.opensuse.org/repositories/home:/alvistack/CentOS_7/home:al
 yum update
 yum install podman podman-docker podman-aardvark-dns slirp4netns container-selinux 
 ```
-
+## 设置```user_namespaces```
+```sh
 echo "user.max_user_namespaces=15000" | sudo tee /etc/sysctl.d/42-rootless.conf
 sudo sysctl --system
-
+```
+## 设置`subuid`和`subgid`
+```sh
 sudo usermod --add-subuids 100000-165535 --add-subgids 100000-165535 $(id -nu)
 sudo loginctl enable-linger $(id -nu)
 # Failed to connect to bus: 找不到介质
@@ -41,7 +44,9 @@ export XDG_RUNTIME_DIR=/run/user/$(id -u)
 export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
 
 podman system reset --force
-
+```
+## SElinux说明
+```
 # sudo getsebool -a | grep "container"
 # sudo setsebool container_use_devices=true
 # sudo setsebool -P container_use_devices=true
@@ -53,7 +58,9 @@ podman system reset --force
 # container_connect_any	off	允许容器访问主机上的特权端口。例如，如果您有一个容器需要将端口映射到主机上的 443 或 80。
 # container_manage_cgroup	off	允许容器管理 cgroup 配置。例如，运行 systemd 的容器将需要启用此功能。
 # container_use_cephfs	off	允许容器使用 ceph 文件系统。
-
+```
+## `Podman` 安装 `openldap`
+```sh
 podman run \
 --name openldap \
 -e LDAP_ADMIN_USERNAME="admin" \
@@ -65,16 +72,22 @@ podman run \
 -p 1389:1389 \
 -p 1636:1636 \
 -d bitnami/openldap:latest
-
+```
+## 设置防火墙
+```sh
 firewall-cmd --add-port=1389/tcp --permanent
 firewall-cmd --reload
-
+```
+## 普通用户启动 `podman systemd`
+```sh
 podman generate systemd --files --name openldap
 mkdir -p .config/systemd/user/
 mv *.service ~/.config/systemd/user/
-
-sudo nano /etc/systemd/system/user@YOUR_NON-ROOT_USER_ID.service
 ```
+## 正确设置`systemctl --user`的dbus连接
+```sh
+sudo nano /etc/systemd/system/user@YOUR_NON-ROOT_USER_ID.service
+
 [Unit]
 Description=User Manager for UID %i
 After=systemd-user-sessions.service
@@ -101,19 +114,19 @@ RestartSec=15
 [Install]
 WantedBy=default.target
 ```
-
+```
 systemctl daemon-reload
 systemctl enable user@YOUR_NON-ROOT_USER_ID.service
 systemctl start user@YOUR_NON-ROOT_USER_ID.service
+```
+## 安装docker{可选}
+- curl -L https://get.docker.com | sh
+- wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
+- chmod +x docker-compose-linux-x86_64
+- sudo mv docker-compose-linux-x86_64 /usr/local/bin/docker-compose
 
-
-curl -L https://get.docker.com | sh
-wget https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
-chmod +x docker-compose-linux-x86_64
-sudo mv docker-compose-linux-x86_64 /usr/local/bin/docker-compose
-
-curl https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
-sed -i -e "s/enabled=1/enabled=0/g" /etc/yum.repos.d/docker-ce.repo
-yum --enablerepo=docker-ce-stable -y install docker-ce
-sudo usermod -aG docker $USER
-systemctl enable --now docker
+- curl https://download.docker.com/linux/centos/docker-ce.repo -o /etc/yum.repos.d/docker-ce.repo
+- sed -i -e "s/enabled=1/enabled=0/g" /etc/yum.repos.d/docker-ce.repo
+- yum --enablerepo=docker-ce-stable -y install docker-ce
+- sudo usermod -aG docker $USER
+- systemctl enable --now docker
