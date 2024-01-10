@@ -91,3 +91,28 @@ podman exec -ti openldap ldapadd -Y EXTERNAL -Q -H ldapi:/// -f /bitnami/openlda
 
 # SearchFilter  "(cn=%u)"
 # SearchFilter	"sAMAccountName=%u"
+
+--------------------------------------------------------------------------
+podman run --rm \
+-v "/opt/podman/lam:/config" \
+--privileged \
+ghcr.io/ldapaccountmanager/lam:8.6 \
+bash -xc "cp -ar /var/lib/ldap-account-manager/config /config"
+ 
+podman run \
+--name lam \
+--log-driver json-file \
+--log-opt max-size=1m \
+--log-opt max-file=1 \
+--privileged \
+-p 8080:80 \
+-v /opt/podman/lam/config:/var/lib/ldap-account-manager/config \
+-e LDAP_SERVER="ldap://127.0.0.1:1389" \
+-e LDAP_DOMAIN="openvpn.server" \
+-e LDAP_BASE_DN="dc=openvpn,dc=server" \
+-e LDAP_USER="cn=admin,dc=openvpn,dc=server" \
+-e LAM_PASSWORD=As@123 \
+-e LAM_LANG=zh_CN \
+-e DEBUG=false \
+-d ghcr.io/ldapaccountmanager/lam:8.6
+-----------------------------------------------------------------------------------
