@@ -111,7 +111,7 @@ podman run \
 -e LDAP_DOMAIN="openvpn.server" \
 -e LDAP_BASE_DN="dc=openvpn,dc=server" \
 -e LDAP_USER="cn=admin,dc=openvpn,dc=server" \
--e LAM_PASSWORD=As@123 \
+-e LAM_PASSWORD=Password \
 -e LAM_LANG=zh_CN \
 -e DEBUG=false \
 -d ghcr.io/ldapaccountmanager/lam:8.6
